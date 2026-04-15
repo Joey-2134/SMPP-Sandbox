@@ -1,0 +1,36 @@
+package pdu
+
+import "errors"
+
+// see SMPP 3.4 spec section 4.4.2
+type SubmitSMResp struct {
+	Header    Header
+	MessageID string // max 65
+}
+
+func ReadSubmitSMResp(data []byte) (SubmitSMResp, error) {
+	if len(data) < 16 {
+		return SubmitSMResp{}, errors.New("data too short to contain a submit_sm_resp PDU")
+	}
+	header, err := ReadHeader(data[0:16])
+	if err != nil {
+		return SubmitSMResp{}, err
+	}
+
+	messageID, _, err := ReadCOctetString(data[16:])
+	if err != nil {
+		return SubmitSMResp{}, err
+	}
+
+	return SubmitSMResp{
+		Header:    header,
+		MessageID: messageID,
+	}, nil
+}
+
+func WriteSubmitSMResp(s SubmitSMResp) []byte {
+	data := WriteHeader(s.Header)
+	data = append(data, []byte(s.MessageID)...)
+	data = append(data, 0x00)
+	return data
+}
