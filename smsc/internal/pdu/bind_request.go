@@ -2,8 +2,8 @@ package pdu
 
 import "errors"
 
-// see SMPP 3.4 spec section 4.1.3
-type BindReceiver struct {
+// see SMPP 3.4 spec section 4.1
+type BindRequest struct {
 	Header           Header
 	SystemID         string
 	Password         string
@@ -14,32 +14,32 @@ type BindReceiver struct {
 	AddressRange     string
 }
 
-func ReadBindReceiver(data []byte) (BindReceiver, error) {
+func ReadBindRequest(data []byte) (BindRequest, error) {
 	if len(data) < 16 {
-		return BindReceiver{}, errors.New("data too short to contain a bind_receiver PDU")
+		return BindRequest{}, errors.New("data too short to contain a bind_receiver PDU")
 	}
 	header, err := ReadHeader(data[0:16])
 	if err != nil {
-		return BindReceiver{}, err
+		return BindRequest{}, err
 	}
 
 	offset := 16
 
 	systemID, n, err := ReadCOctetString(data[offset:])
 	if err != nil {
-		return BindReceiver{}, err
+		return BindRequest{}, err
 	}
 	offset += n
 
 	password, n, err := ReadCOctetString(data[offset:])
 	if err != nil {
-		return BindReceiver{}, err
+		return BindRequest{}, err
 	}
 	offset += n
 
 	systemType, n, err := ReadCOctetString(data[offset:])
 	if err != nil {
-		return BindReceiver{}, err
+		return BindRequest{}, err
 	}
 	offset += n
 
@@ -50,10 +50,10 @@ func ReadBindReceiver(data []byte) (BindReceiver, error) {
 
 	addressRange, _, err := ReadCOctetString(data[offset:])
 	if err != nil {
-		return BindReceiver{}, err
+		return BindRequest{}, err
 	}
 
-	return BindReceiver{
+	return BindRequest{
 		Header:           header,
 		SystemID:         systemID,
 		Password:         password,
@@ -65,18 +65,18 @@ func ReadBindReceiver(data []byte) (BindReceiver, error) {
 	}, nil
 }
 
-func WriteBindReceiver(bindReceiver BindReceiver) []byte {
-	data := WriteHeader(bindReceiver.Header)
-	data = append(data, []byte(bindReceiver.SystemID)...)
+func WriteBindRequest(bindRequest BindRequest) []byte {
+	data := WriteHeader(bindRequest.Header)
+	data = append(data, []byte(bindRequest.SystemID)...)
 	data = append(data, 0x00)
-	data = append(data, []byte(bindReceiver.Password)...)
+	data = append(data, []byte(bindRequest.Password)...)
 	data = append(data, 0x00)
-	data = append(data, []byte(bindReceiver.SystemType)...)
+	data = append(data, []byte(bindRequest.SystemType)...)
 	data = append(data, 0x00)
-	data = append(data, bindReceiver.InterfaceVersion)
-	data = append(data, bindReceiver.AddrTon)
-	data = append(data, bindReceiver.AddrNpi)
-	data = append(data, []byte(bindReceiver.AddressRange)...)
+	data = append(data, bindRequest.InterfaceVersion)
+	data = append(data, bindRequest.AddrTon)
+	data = append(data, bindRequest.AddrNpi)
+	data = append(data, []byte(bindRequest.AddressRange)...)
 	data = append(data, 0x00)
 	return data
 }
