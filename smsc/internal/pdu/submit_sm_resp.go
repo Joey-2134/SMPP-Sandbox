@@ -38,7 +38,7 @@ func WriteSubmitSMResp(s SubmitSMResp) []byte {
 func NewSubmitSMResp(sequenceNumber uint32, commandStatus uint32, messageID string) []byte {
 	submitSMResp := SubmitSMResp{
 		Header: Header{
-			CommandLength:  HEADER_LENGTH,
+			CommandLength:  HEADER_LENGTH + uint32(len(messageID)) + 1,
 			CommandID:      SUBMIT_SM_RESP,
 			CommandStatus:  commandStatus,
 			SequenceNumber: sequenceNumber,

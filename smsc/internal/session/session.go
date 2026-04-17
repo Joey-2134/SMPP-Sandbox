@@ -121,6 +121,7 @@ func (s *Session) handleUnbind(header pdu.Header) error {
 	}
 	s.State = UNBOUND
 	_, err := s.Conn.Write(pdu.NewUnbindResp(header.SequenceNumber, pdu.ESME_ROK))
+	s.Conn.Close()
 	return err
 }
 

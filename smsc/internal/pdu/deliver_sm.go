@@ -25,15 +25,15 @@ type DeliverSM struct {
 }
 
 func ReadDeliverSM(data []byte) (DeliverSM, error) {
-	if len(data) < 16 {
+	if len(data) < HEADER_LENGTH {
 		return DeliverSM{}, errors.New("data too short to contain a deliver_sm PDU")
 	}
-	header, err := ReadHeader(data[0:16])
+	header, err := ReadHeader(data[0:HEADER_LENGTH])
 	if err != nil {
 		return DeliverSM{}, err
 	}
 
-	offset := 16
+	offset := HEADER_LENGTH
 
 	serviceType, n, err := ReadCOctetString(data[offset:])
 	if err != nil {
