@@ -7,10 +7,10 @@ type Unbind struct {
 }
 
 func ReadUnbind(data []byte) (Unbind, error) {
-	if len(data) < 16 {
+	if len(data) < HEADER_LENGTH {
 		return Unbind{}, errors.New("data too short to contain a unbind PDU")
 	}
-	header, err := ReadHeader(data[0:16])
+	header, err := ReadHeader(data[0:HEADER_LENGTH])
 	if err != nil {
 		return Unbind{}, err
 	}

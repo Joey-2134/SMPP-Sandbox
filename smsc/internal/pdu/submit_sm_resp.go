@@ -9,15 +9,15 @@ type SubmitSMResp struct {
 }
 
 func ReadSubmitSMResp(data []byte) (SubmitSMResp, error) {
-	if len(data) < 16 {
+	if len(data) < HEADER_LENGTH {
 		return SubmitSMResp{}, errors.New("data too short to contain a submit_sm_resp PDU")
 	}
-	header, err := ReadHeader(data[0:16])
+	header, err := ReadHeader(data[0:HEADER_LENGTH])
 	if err != nil {
 		return SubmitSMResp{}, err
 	}
 
-	messageID, _, err := ReadCOctetString(data[16:])
+	messageID, _, err := ReadCOctetString(data[HEADER_LENGTH:])
 	if err != nil {
 		return SubmitSMResp{}, err
 	}
@@ -33,4 +33,17 @@ func WriteSubmitSMResp(s SubmitSMResp) []byte {
 	data = append(data, []byte(s.MessageID)...)
 	data = append(data, 0x00)
 	return data
+}
+
+func NewSubmitSMResp(sequenceNumber uint32, commandStatus uint32, messageID string) []byte {
+	submitSMResp := SubmitSMResp{
+		Header: Header{
+			CommandLength:  HEADER_LENGTH,
+			CommandID:      SUBMIT_SM_RESP,
+			CommandStatus:  commandStatus,
+			SequenceNumber: sequenceNumber,
+		},
+		MessageID: messageID,
+	}
+	return WriteSubmitSMResp(submitSMResp)
 }

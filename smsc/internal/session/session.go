@@ -1,16 +1,24 @@
 package session
 
 import (
+	"fmt"
 	"net"
+	"sync/atomic"
 
 	"github.com/joeygalvin/smpp-sandbox/smsc/internal/pdu"
 )
+
+var messageIDCounter atomic.Uint64
 
 type Session struct {
 	State          State
 	Conn           net.Conn
 	SystemID       string
 	SequenceNumber uint32
+}
+
+func generateMessageID() string {
+	return fmt.Sprintf("%d", messageIDCounter.Add(1))
 }
 
 func NewSession(conn net.Conn) *Session {
@@ -85,11 +93,28 @@ func (s *Session) handleBind(header pdu.Header, raw []byte, state State, command
 }
 
 func (s *Session) handleDeliverSMResp(header pdu.Header, raw []byte) error {
-	panic("unimplemented")
+	if s.State != BOUND_RX && s.State != BOUND_TRX {
+		return s.writeGenericNack(header.SequenceNumber, pdu.ESME_RINVBNDSTS)
+	}
+	_, err := pdu.ReadDeliverSMResp(raw)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Session) handleSubmitSM(header pdu.Header, raw []byte) error {
-	panic("unimplemented")
+	if s.State != BOUND_TX && s.State != BOUND_TRX {
+		return s.writeGenericNack(header.SequenceNumber, pdu.ESME_RINVBNDSTS)
+	}
+	_, err := pdu.ReadSubmitSM(raw)
+	if err != nil {
+		return err
+	}
+
+	messageID := generateMessageID()
+	_, err = s.Conn.Write(pdu.NewSubmitSMResp(header.SequenceNumber, pdu.ESME_ROK, messageID))
+	return err
 }
 
 func (s *Session) handleEnquireLink(header pdu.Header) error {
