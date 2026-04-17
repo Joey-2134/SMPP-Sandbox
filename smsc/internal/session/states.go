@@ -10,3 +10,7 @@ const (
 	BOUND_TRX State = "bound_trx"
 	UNBOUND   State = "unbound"
 )
+
+func isBound(state State) bool {
+	return state == BOUND_TX || state == BOUND_RX || state == BOUND_TRX
+}

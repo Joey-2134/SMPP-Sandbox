@@ -33,6 +33,14 @@ func (s *Session) Handle(raw []byte) error {
 		return s.handleBind(header, raw, BOUND_TX, pdu.BIND_TRANSMITTER_RESP)
 	case pdu.BIND_TRANSCEIVER:
 		return s.handleBind(header, raw, BOUND_TRX, pdu.BIND_TRANSCEIVER_RESP)
+	case pdu.SUBMIT_SM:
+		return s.handleSubmitSM(header, raw)
+	case pdu.DELIVER_SM_RESP:
+		return s.handleDeliverSMResp(header, raw)
+	case pdu.ENQUIRE_LINK:
+		return s.handleEnquireLink(header)
+	case pdu.UNBIND:
+		return s.handleUnbind(header)
 	default:
 		return s.handleDefault(header)
 	}
@@ -40,6 +48,16 @@ func (s *Session) Handle(raw []byte) error {
 
 func (s *Session) writeGenericNack(sequenceNumber uint32, commandStatus uint32) error {
 	_, err := s.Conn.Write(pdu.NewGenericNack(sequenceNumber, commandStatus))
+	return err
+}
+
+func (s *Session) writeEnquireLinkResp(sequenceNumber uint32) error {
+	_, err := s.Conn.Write(pdu.NewEnquireLinkResp(sequenceNumber))
+	return err
+}
+
+func (s *Session) writeUnbindResp(sequenceNumber uint32, commandStatus uint32) error {
+	_, err := s.Conn.Write(pdu.NewUnbindResp(sequenceNumber, commandStatus))
 	return err
 }
 
@@ -64,6 +82,29 @@ func (s *Session) handleBind(header pdu.Header, raw []byte, state State, command
 	}
 	_, err = s.Conn.Write(pdu.WriteBindResponse(bindResponse))
 	return err
+}
+
+func (s *Session) handleDeliverSMResp(header pdu.Header, raw []byte) error {
+	panic("unimplemented")
+}
+
+func (s *Session) handleSubmitSM(header pdu.Header, raw []byte) error {
+	panic("unimplemented")
+}
+
+func (s *Session) handleEnquireLink(header pdu.Header) error {
+	if !isBound(s.State) {
+		return s.writeGenericNack(header.SequenceNumber, pdu.ESME_RINVBNDSTS)
+	}
+	return s.writeEnquireLinkResp(header.SequenceNumber)
+}
+
+func (s *Session) handleUnbind(header pdu.Header) error {
+	if !isBound(s.State) {
+		return s.writeGenericNack(header.SequenceNumber, pdu.ESME_RINVBNDSTS)
+	}
+	s.State = UNBOUND
+	return s.writeUnbindResp(header.SequenceNumber, pdu.ESME_ROK)
 }
 
 func (s *Session) handleDefault(header pdu.Header) error {
