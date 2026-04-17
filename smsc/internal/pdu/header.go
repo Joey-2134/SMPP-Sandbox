@@ -5,6 +5,8 @@ import (
 	"errors"
 )
 
+const HEADER_LENGTH = 16
+
 type Header struct {
 	CommandLength  uint32
 	CommandID      uint32
@@ -13,7 +15,7 @@ type Header struct {
 }
 
 func ReadHeader(data []byte) (Header, error) {
-	if len(data) < 16 {
+	if len(data) < HEADER_LENGTH {
 		return Header{}, errors.New("data too short to contain a header")
 	}
 	header := Header{
@@ -26,7 +28,7 @@ func ReadHeader(data []byte) (Header, error) {
 }
 
 func WriteHeader(header Header) []byte {
-	data := make([]byte, 16)
+	data := make([]byte, HEADER_LENGTH)
 	binary.BigEndian.PutUint32(data[0:4], header.CommandLength)
 	binary.BigEndian.PutUint32(data[4:8], header.CommandID)
 	binary.BigEndian.PutUint32(data[8:12], header.CommandStatus)
