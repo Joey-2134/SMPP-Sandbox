@@ -59,16 +59,6 @@ func (s *Session) writeGenericNack(sequenceNumber uint32, commandStatus uint32) 
 	return err
 }
 
-func (s *Session) writeEnquireLinkResp(sequenceNumber uint32) error {
-	_, err := s.Conn.Write(pdu.NewEnquireLinkResp(sequenceNumber))
-	return err
-}
-
-func (s *Session) writeUnbindResp(sequenceNumber uint32, commandStatus uint32) error {
-	_, err := s.Conn.Write(pdu.NewUnbindResp(sequenceNumber, commandStatus))
-	return err
-}
-
 func (s *Session) handleBind(header pdu.Header, raw []byte, state State, commandID uint32) error {
 	if s.State != OPEN {
 		return s.writeGenericNack(header.SequenceNumber, pdu.ESME_RINVBNDSTS)
@@ -121,7 +111,8 @@ func (s *Session) handleEnquireLink(header pdu.Header) error {
 	if !isBound(s.State) {
 		return s.writeGenericNack(header.SequenceNumber, pdu.ESME_RINVBNDSTS)
 	}
-	return s.writeEnquireLinkResp(header.SequenceNumber)
+	_, err := s.Conn.Write(pdu.NewEnquireLinkResp(header.SequenceNumber))
+	return err
 }
 
 func (s *Session) handleUnbind(header pdu.Header) error {
@@ -129,7 +120,8 @@ func (s *Session) handleUnbind(header pdu.Header) error {
 		return s.writeGenericNack(header.SequenceNumber, pdu.ESME_RINVBNDSTS)
 	}
 	s.State = UNBOUND
-	return s.writeUnbindResp(header.SequenceNumber, pdu.ESME_ROK)
+	_, err := s.Conn.Write(pdu.NewUnbindResp(header.SequenceNumber, pdu.ESME_ROK))
+	return err
 }
 
 func (s *Session) handleDefault(header pdu.Header) error {
