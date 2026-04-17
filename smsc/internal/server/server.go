@@ -8,8 +8,19 @@ import (
 )
 
 type Server struct {
-	addr    string
-	handler func(conn net.Conn, raw []byte)
+	addr         string
+	onConnect    func(conn net.Conn)
+	onDisconnect func(conn net.Conn)
+	handler      func(conn net.Conn, raw []byte)
+}
+
+func NewServer(addr string, onConnect func(net.Conn), onDisconnect func(net.Conn), handler func(net.Conn, []byte)) *Server {
+	return &Server{
+		addr:         addr,
+		onConnect:    onConnect,
+		onDisconnect: onDisconnect,
+		handler:      handler,
+	}
 }
 
 func (s *Server) Start() {
@@ -29,7 +40,12 @@ func (s *Server) Start() {
 }
 
 func (s *Server) handleConn(conn net.Conn) {
-	defer conn.Close()
+	s.onConnect(conn)
+	defer func() {
+		s.onDisconnect(conn)
+		conn.Close()
+	}()
+
 	for {
 		lenBuf := make([]byte, 4)
 		if _, err := io.ReadFull(conn, lenBuf); err != nil {
@@ -51,12 +67,5 @@ func (s *Server) handleConn(conn net.Conn) {
 
 		raw := append(lenBuf, commandBuf...)
 		s.handler(conn, raw)
-	}
-}
-
-func NewServer(addr string, handler func(conn net.Conn, raw []byte)) *Server {
-	return &Server{
-		addr:    addr,
-		handler: handler,
 	}
 }
