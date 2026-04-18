@@ -1,6 +1,7 @@
 package dev.joey.smppclient;
 
 import dev.joey.smppclient.pdu.*;
+import lombok.Getter;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class SmppClient {
+    @Getter
     private final UUID clientId;
     private final String host;
     private final int port;
