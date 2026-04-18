@@ -2,7 +2,7 @@
 
 ## Phase 1 — Spring Boot setup
 
-- Add `spring-boot-starter-web` and `spring-boot-starter-websocket` to `esme/pom.xml`
+- Add `spring-boot-starter-web` to `esme/pom.xml`
 - Add `spring-boot-maven-plugin` so the app can be run with `mvn spring-boot:run`
 - Replace `Main.java` with a `@SpringBootApplication` entry point
 - Verify the app starts and serves on port 8080 with no routes yet
@@ -51,7 +51,7 @@ else:
 ### SmppClient fields added
 - `String id` — UUID assigned at construction
 - `List<SessionEvent> eventLog` — ordered log of all events on this session (bind, submits, receipts, errors)
-- `Consumer<SessionEvent> eventListener` — called by background thread on each new event; wired to WebSocket push by Spring
+- `Consumer<SessionEvent> eventListener` — called by background thread on each new event; wired to SSE push by Spring
 
 ---
 
@@ -86,28 +86,37 @@ Single `@RestController` at `/api/sessions`.
 
 ---
 
-## Phase 5 — WebSocket
+## Phase 5 — SSE (Server-Sent Events)
 
-### Config
-- `WebSocketConfig.java` — enable STOMP, register `/ws` as the WebSocket endpoint, `/topic` as the broker prefix
-- SockJS fallback enabled for browser compatibility
+### How it works
+- Browser opens a long-lived GET request to `/api/sessions/{id}/events/stream`
+- Spring holds the connection open with `SseEmitter`
+- Background thread pushes events down it as they arrive
+- No config needed — built into `spring-boot-starter-web`
 
 ### Event push
-- Inject `SimpMessagingTemplate` into `SmppClient` (or pass it in at construction via `SessionRegistry`)
-- Background thread calls `messagingTemplate.convertAndSend("/topic/sessions/{id}", event)` on:
+- `SmppClient` holds a `Consumer<SessionEvent> eventListener` set at construction by `SessionRegistry`
+- Background thread calls `eventListener.accept(event)` on:
   - `submit_sm_resp` received
   - `deliver_sm` received
   - Session error / disconnect
+- `SessionRegistry` wires the listener to call `sseEmitter.send(event)` on the emitter for that session
+
+### Emitter lifecycle
+- `SseEmitter` is created when the browser opens the stream endpoint
+- Stored in `SessionRegistry` alongside the `SmppClient`
+- Completed (closed) when the session is unbound or the connection drops
 
 ### Browser subscription
-- Browser subscribes to `/topic/sessions/{id}` after creating a session
-- New events are appended to the session's message log in real time
+- After creating a session, browser opens `EventSource("/api/sessions/{id}/events/stream")`
+- Each event is appended to the session's message log in real time
+- No JS library needed — `EventSource` is built into all browsers
 
 ---
 
 ## Phase 6 — Frontend
 
-Single HTML page served from `esme/src/main/resources/static/index.html`. Vanilla JS + STOMP.js (loaded from CDN).
+Single HTML page served from `esme/src/main/resources/static/index.html`. Vanilla JS, no libraries needed.
 
 ### Create session panel
 - Form: host, port, systemId, password, bind type (TX / RX / TRX)
@@ -120,5 +129,5 @@ Single HTML page served from `esme/src/main/resources/static/index.html`. Vanill
 
 ### Per-session card
 - Send message form: from, to, message → POST `/api/sessions/{id}/submit`
-- Live event log — WebSocket subscription to `/topic/sessions/{id}`, each event appended as a row
+- Live event log — `EventSource` subscription to `/api/sessions/{id}/events/stream`, each event appended as a row
 - Event row shows: timestamp, type, detail (message ID, receipt status, error message)

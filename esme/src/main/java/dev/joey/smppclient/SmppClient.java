@@ -2,6 +2,7 @@ package dev.joey.smppclient;
 
 import dev.joey.smppclient.pdu.*;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,6 +10,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -27,9 +29,12 @@ public class SmppClient {
     private Socket socket;
     private InputStream in;
     private OutputStream out;
+    @Setter
+    private Consumer<SessionEvent> eventListener = e -> {}; // no-op default
     private final AtomicInteger sequenceNumber = new AtomicInteger(1);
     private final ConcurrentHashMap<Integer, CompletableFuture<byte[]>> pendingResponses = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, Consumer<SubmitSmResp>> submitCallbacks = new ConcurrentHashMap<>();
+    
 
     public SmppClient(String host, int port) {
         this.clientId = UUID.randomUUID();
@@ -92,6 +97,11 @@ public class SmppClient {
         int seqNum = nextSequenceNumber();
         submitCallbacks.put(seqNum, callback);
         out.write(SubmitSm.basic(seqNum, from, to, message).toBytes());
+        eventListener.accept(new SessionEvent(
+            SessionEvent.EventType.SUBMIT_SENT,
+             LocalDateTime.now().toString(),
+              "Sent to " + to + ": " + message
+            ));
     }
 
     private byte[] readPdu() throws IOException {
@@ -126,7 +136,13 @@ public class SmppClient {
                     }
                     Consumer<SubmitSmResp> callback = submitCallbacks.remove(header.getSequenceNumber());
                     if (callback != null) {
-                        callback.accept(SubmitSmResp.fromBytes(raw));
+                        SubmitSmResp resp = SubmitSmResp.fromBytes(raw);
+                        eventListener.accept(new SessionEvent(
+                            SessionEvent.EventType.SUBMIT_ACKED,
+                            LocalDateTime.now().toString(),
+                            "Message ID: " + resp.getMessageId()
+                        ));
+                        callback.accept(resp);
                     }
                 } else {
                     switch (header.getCommandId()) {
@@ -143,7 +159,12 @@ public class SmppClient {
     }
   
     private void handleDeliverSm(Header header, byte[] raw) throws IOException {
-        // TODO: parse and log the delivery receipt
+        SessionEvent event = new SessionEvent(
+            SessionEvent.EventType.DELIVER_SM,
+            LocalDateTime.now().toString(),
+            "Received deliver_sm PDU"
+        );
+        eventListener.accept(event);
         System.out.println("Received deliver_sm PDU");
         out.write(new DeliverSmResp(header.getSequenceNumber()).toBytes());
     }

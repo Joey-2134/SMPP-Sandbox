@@ -2,6 +2,7 @@ package dev.joey.smppclient.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,6 +23,13 @@ public class SessionController {
     public SessionController(SessionRegistry sessionRegistry) {
         this.sessionRegistry = sessionRegistry;
     }
+
+    @GetMapping("/{id}/events/stream")
+    public SseEmitter stream(@PathVariable UUID id) {
+        SseEmitter emitter = new SseEmitter(0L);
+        sessionRegistry.registerEmitter(id, emitter);
+        return emitter;
+  }
 
     @GetMapping
     public Collection<SmppClient> listSessions() {
