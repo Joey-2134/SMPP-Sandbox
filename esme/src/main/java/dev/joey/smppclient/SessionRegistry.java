@@ -26,11 +26,11 @@ public class SessionRegistry {
         });
     }
     
-    public UUID createSession(String host, int port, String systemId, String password) {
+    public UUID createSession(String host, int port, String systemId, String password, BindType bindType) {
         SmppClient client = new SmppClient(host, port);
         try {
             client.connect();
-            client.bind(systemId, password);
+            client.bind(systemId, password, bindType);
             sessions.put(client.getClientId(), client);
             return client.getClientId();
         } catch (IOException e) {

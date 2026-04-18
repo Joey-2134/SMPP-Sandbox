@@ -29,12 +29,14 @@ public class SmppClient {
     private Socket socket;
     private InputStream in;
     private OutputStream out;
+    @Getter
+    private BindType bindType;
     @Setter
     private Consumer<SessionEvent> eventListener = e -> {}; // no-op default
     private final AtomicInteger sequenceNumber = new AtomicInteger(1);
     private final ConcurrentHashMap<Integer, CompletableFuture<byte[]>> pendingResponses = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, Consumer<SubmitSmResp>> submitCallbacks = new ConcurrentHashMap<>();
-    
+
 
     public SmppClient(String host, int port) {
         this.clientId = UUID.randomUUID();
@@ -52,12 +54,18 @@ public class SmppClient {
     }
 
     //blocking
-    public void bind(String systemId, String password) throws IOException {
+    public void bind(String systemId, String password, BindType bindType) throws IOException {
+        this.bindType = bindType;
         int seqNum = nextSequenceNumber();
         CompletableFuture<byte[]> future = new CompletableFuture<>();
         pendingResponses.put(seqNum, future);
 
-        out.write(new BindTransmitter(seqNum, systemId, password, "").toBytes());
+        int commandId = switch (bindType) {
+            case TX  -> CommandId.BIND_TRANSMITTER;
+            case RX  -> CommandId.BIND_RECEIVER;
+            case TRX -> CommandId.BIND_TRANSCEIVER;
+        };
+        out.write(new BindTransmitter(commandId, seqNum, systemId, password, "").toBytes());
 
         try {
             byte[] respBytes = future.get(5, TimeUnit.SECONDS);

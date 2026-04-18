@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SMPP Sandbox</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #d4d4d4;
+            padding: 24px;
+        }
+
+        h1 { font-size: 1.2rem; color: #fff; margin-bottom: 24px; letter-spacing: 0.05em; }
+        h2 { font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+        h3 { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+
+        .panel {
+            background: #242424;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        label { font-size: 0.7rem; color: #666; }
+
+        input, select {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            color: #d4d4d4;
+            font-family: monospace;
+            font-size: 0.85rem;
+            padding: 6px 8px;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input:focus, select:focus { border-color: #666; }
+        input[name="host"] { width: 140px; }
+        input[name="port"] { width: 70px; }
+        input[name="systemId"] { width: 100px; }
+        input[name="password"] { width: 100px; }
+
+        button {
+            background: #2d5a9e;
+            border: 1px solid #3a6dbf;
+            color: #fff;
+            font-family: monospace;
+            font-size: 0.85rem;
+            padding: 6px 14px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        button:hover { background: #3a6dbf; }
+        button.danger { background: #7a2323; border-color: #9e2e2e; }
+        button.danger:hover { background: #9e2e2e; }
+        button.secondary { background: #333; border-color: #444; color: #ccc; }
+        button.secondary:hover { background: #444; }
+
+        #sessions { display: flex; flex-direction: column; gap: 12px; }
+
+        .session-card {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 14px;
+        }
+
+        .session-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .session-meta { display: flex; gap: 16px; align-items: center; }
+
+        .badge {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: #2d5a2d;
+            color: #7ec87e;
+            border: 1px solid #3d7a3d;
+        }
+
+        .session-id { font-size: 0.7rem; color: #555; }
+
+        .send-form { margin-bottom: 12px; }
+
+        input[name="from"] { width: 110px; }
+        input[name="to"]   { width: 110px; }
+        input[name="msg"]  { width: 240px; }
+
+        .event-log {
+            border: 1px solid #2a2a2a;
+            border-radius: 3px;
+            background: #141414;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .event-log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .event-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+
+        .event-table td {
+            padding: 4px 10px;
+            border-bottom: 1px solid #1e1e1e;
+            vertical-align: top;
+        }
+
+        .event-table tr:last-child td { border-bottom: none; }
+
+        .event-table .ts  { color: #555; white-space: nowrap; width: 180px; }
+        .event-table .detail { color: #aaa; }
+
+        .type-SUBMIT_SENT  { color: #7eb8d4; }
+        .type-SUBMIT_ACKED { color: #7ec87e; }
+        .type-DELIVER_SM   { color: #d4a76a; }
+        .type-ERROR        { color: #d47a7a; }
+
+        .empty-log { color: #444; font-size: 0.75rem; padding: 10px; text-align: center; }
+
+        #no-sessions { color: #444; font-size: 0.85rem; padding: 8px 0; }
+    </style>
+</head>
+<body>
+
+<h1>SMPP Sandbox</h1>
+
+<div class="panel">
+    <h2>Create Session</h2>
+    <form id="create-form" class="form-row">
+        <div class="field">
+            <label>Host</label>
+            <input name="host" value="localhost" required>
+        </div>
+        <div class="field">
+            <label>Port</label>
+            <input name="port" type="number" value="2775" required>
+        </div>
+        <div class="field">
+            <label>System ID</label>
+            <input name="systemId" value="test" required>
+        </div>
+        <div class="field">
+            <label>Password</label>
+            <input name="password" value="test" required>
+        </div>
+        <div class="field">
+            <label>Bind Type</label>
+            <select name="bindType">
+                <option value="TX">TX</option>
+                <option value="RX">RX</option>
+                <option value="TRX" selected>TRX</option>
+            </select>
+        </div>
+        <button type="submit">Connect</button>
+    </form>
+</div>
+
+<div class="panel">
+    <h2>Sessions</h2>
+    <div id="sessions">
+        <div id="no-sessions">No active sessions.</div>
+    </div>
+</div>
+
+<script>
+    // sessionId -> { eventSource, card }
+    const sessions = {};
+
+    document.getElementById('create-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const body = {
+            host:     form.host.value,
+            port:     parseInt(form.port.value),
+            systemId: form.systemId.value,
+            password: form.password.value,
+            bindType: form.bindType.value,
+        };
+
+        const btn = form.querySelector('button');
+        btn.disabled = true;
+        btn.textContent = 'Connecting...';
+
+        try {
+            const resp = await fetch('/api/sessions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (!resp.ok) throw new Error(await resp.text());
+            const id = await resp.json();
+            addSessionCard(id, body.systemId, body.bindType);
+        } catch (err) {
+            alert('Failed to connect: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Connect';
+        }
+    });
+
+    function addSessionCard(id, systemId, bindType) {
+        document.getElementById('no-sessions')?.remove();
+
+        const canSend = bindType !== 'RX';
+
+        const card = document.createElement('div');
+        card.className = 'session-card';
+        card.id = 'session-' + id;
+        card.innerHTML = `
+            <div class="session-header">
+                <div class="session-meta">
+                    <span><strong>${systemId}</strong></span>
+                    <span class="badge">${bindType}</span>
+                    <span class="session-id">${id}</span>
+                </div>
+                <button class="danger" onclick="disconnectSession('${id}')">Disconnect</button>
+            </div>
+
+            ${canSend ? `
+            <div class="send-form">
+                <h3>Send Message</h3>
+                <form class="form-row" onsubmit="sendMessage(event, '${id}')">
+                    <div class="field">
+                        <label>From</label>
+                        <input name="from" placeholder="12345" required>
+                    </div>
+                    <div class="field">
+                        <label>To</label>
+                        <input name="to" placeholder="67890" required>
+                    </div>
+                    <div class="field">
+                        <label>Message</label>
+                        <input name="msg" placeholder="Hello world" required>
+                    </div>
+                    <button type="submit" class="secondary">Send</button>
+                </form>
+            </div>` : ''}
+
+            <div class="event-log">
+                <div class="event-log-header">
+                    <h3 style="margin:0">Events</h3>
+                </div>
+                <div class="log-body-${id}">
+                    <div class="empty-log">Waiting for events...</div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('sessions').appendChild(card);
+
+        const es = new EventSource('/api/sessions/' + id + '/events/stream');
+        es.onmessage = (e) => {
+            const event = JSON.parse(e.data);
+            appendEvent(id, event);
+        };
+        es.onerror = () => {
+            appendEvent(id, { type: 'ERROR', timestamp: new Date().toISOString(), message: 'SSE connection lost' });
+        };
+
+        sessions[id] = { eventSource: es, card };
+    }
+
+    function appendEvent(id, event) {
+        const container = document.querySelector('.log-body-' + id);
+        if (!container) return;
+
+        container.querySelector('.empty-log')?.remove();
+
+        const table = container.querySelector('table') || (() => {
+            const t = document.createElement('table');
+            t.className = 'event-table';
+            container.appendChild(t);
+            return t;
+        })();
+
+        const row = table.insertRow();
+        const ts = event.timestamp ? event.timestamp.replace('T', ' ').substring(0, 23) : '';
+        row.innerHTML = `
+            <td class="ts">${ts}</td>
+            <td class="type-${event.type}">${event.type}</td>
+            <td class="detail">${event.message || ''}</td>
+        `;
+
+        // scroll to bottom
+        const log = container.closest('.event-log');
+        log.scrollTop = log.scrollHeight;
+    }
+
+    async function sendMessage(e, id) {
+        e.preventDefault();
+        const form = e.target;
+        const body = {
+            from:    form.from.value,
+            to:      form.to.value,
+            message: form.msg.value,
+        };
+
+        try {
+            const resp = await fetch('/api/sessions/' + id + '/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (!resp.ok) throw new Error(await resp.text());
+            form.msg.value = '';
+        } catch (err) {
+            alert('Send failed: ' + err.message);
+        }
+    }
+
+    async function disconnectSession(id) {
+        sessions[id]?.eventSource.close();
+
+        try {
+            await fetch('/api/sessions/' + id, { method: 'DELETE' });
+        } catch (err) {
+            console.error('Disconnect error:', err);
+        }
+
+        document.getElementById('session-' + id)?.remove();
+        delete sessions[id];
+
+        if (Object.keys(sessions).length === 0) {
+            const noSessions = document.createElement('div');
+            noSessions.id = 'no-sessions';
+            noSessions.textContent = 'No active sessions.';
+            document.getElementById('sessions').appendChild(noSessions);
+        }
+    }
+</script>
+</body>
+</html>
