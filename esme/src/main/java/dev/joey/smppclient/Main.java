@@ -1,7 +1,16 @@
 package dev.joey.smppclient;
 
+import java.io.IOException;
+
 public class Main {
     public static void main(String[] args) {
-        System.out.println("Hello, World!");
+        SmppClient client = new SmppClient("localhost", 2775);
+        try {
+            client.connect();
+            client.bind("testSystemId", "password");
+            client.unbind();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
