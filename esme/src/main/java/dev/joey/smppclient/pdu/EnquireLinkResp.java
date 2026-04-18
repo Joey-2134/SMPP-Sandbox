@@ -19,4 +19,8 @@ public class EnquireLinkResp {
         Header header = Header.fromBytes(headerBytes);
         return new EnquireLinkResp(header);
     }
+
+    public byte[] toBytes() {
+        return header.toBytes();
+    }
 }

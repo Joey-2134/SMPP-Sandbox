@@ -4,12 +4,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 public class BindTransmitter {
+    private final int commandId;
     private final int sequenceNumber;
     private final String systemId;
     private final String password;
     private final String systemType;
 
-    public BindTransmitter(int sequenceNumber, String systemId, String password, String systemType) {
+    public BindTransmitter(int commandId, int sequenceNumber, String systemId, String password, String systemType) {
+        this.commandId = commandId;
         this.sequenceNumber = sequenceNumber;
         this.systemId = systemId;
         this.password = password;
@@ -23,7 +25,7 @@ public class BindTransmitter {
         byte[] addressRangeBytes = Utils.toCOctetString("");
 
         int bodyLength = systemIdBytes.length + passwordBytes.length + systemTypeBytes.length + addressRangeBytes.length + 3;
-        Header header = new Header(Header.LENGTH + bodyLength, CommandId.BIND_TRANSMITTER, 0, sequenceNumber);
+        Header header = new Header(Header.LENGTH + bodyLength, commandId, 0, sequenceNumber);
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {

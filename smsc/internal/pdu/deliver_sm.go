@@ -133,3 +133,29 @@ func WriteDeliverSM(s DeliverSM) []byte {
 	data = append(data, s.Message...)
 	return data
 }
+
+func NewDeliverSM(sequenceNumber uint32, submitSM SubmitSM, messageID string) []byte {
+	receipt := []byte("id:" + messageID + " sub:001 dlvrd:001 stat:DELIVRD")
+	bodyLength := 17 + len(submitSM.DestAddr) + len(submitSM.SourceAddr) + len(receipt)
+
+	d := DeliverSM{
+		Header: Header{
+			CommandLength:  uint32(HEADER_LENGTH + bodyLength),
+			CommandID:      DELIVER_SM,
+			CommandStatus:  ESME_ROK,
+			SequenceNumber: sequenceNumber,
+		},
+		SourceAddrTon: submitSM.DestAddrTon,
+		SourceAddrNpi: submitSM.DestAddrNpi,
+		SourceAddr:    submitSM.DestAddr,
+		DestAddrTon:   submitSM.SourceAddrTon,
+		DestAddrNpi:   submitSM.SourceAddrNpi,
+		DestAddr:      submitSM.SourceAddr,
+		ESMClass:      0x04,
+		DataCoding:    submitSM.DataCoding,
+		SMLength:      uint8(len(receipt)),
+		Message:       receipt,
+	}
+
+	return WriteDeliverSM(d)
+}
