@@ -104,9 +104,23 @@ func (s *Session) handleSubmitSM(header pdu.Header, raw []byte) error {
 	}
 
 	messageID := generateMessageID()
-	log.Printf("submit_sm from %s: to=%s msg=%s id=%s", s.SystemID, submitSM.DestAddr, string(submitSM.Message), messageID)
+	log.Printf("submit_sm from %s: to=%s msg=%s id=%s, dr_requested=%t", s.SystemID, submitSM.DestAddr, string(submitSM.Message), messageID, submitSM.RegisteredDelivery == 0x01)
+
 	_, err = s.Conn.Write(pdu.NewSubmitSMResp(header.SequenceNumber, pdu.ESME_ROK, messageID))
-	return err
+	if err != nil {
+		return err
+	}
+
+	if submitSM.RegisteredDelivery == 0x01 {
+		s.SequenceNumber++
+		_, err = s.Conn.Write(pdu.NewDeliverSM(s.SequenceNumber, submitSM, messageID))
+		if err != nil {
+			return err
+		}
+		log.Printf("delivered_sm to %s: to=%s msg=%s id=%s", s.SystemID, submitSM.DestAddr, string(submitSM.Message), messageID)
+	}
+
+	return nil
 }
 
 func (s *Session) handleEnquireLink(header pdu.Header) error {
