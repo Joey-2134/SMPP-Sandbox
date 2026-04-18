@@ -31,16 +31,7 @@ public class SmppClient {
     }
 
     public void bind(String systemId, String password) throws IOException {
-        BindTransmitter request = new BindTransmitter(
-                new Header(0, CommandId.BIND_TRANSMITTER, 0, nextSequenceNumber()),
-                systemId,
-                password,
-                "",
-                0x34,
-                0x00,
-                0x00,
-                ""
-        );
+        BindTransmitter request = new BindTransmitter(nextSequenceNumber(), systemId, password, "");
         out.write(request.toBytes());
 
         byte[] respBytes = readPdu();
@@ -62,6 +53,18 @@ public class SmppClient {
         }
         System.out.println("Unbound");
         socket.close();
+    }
+
+    public void submitSm(String from, String to, String message) throws IOException {
+        SubmitSm request = SubmitSm.basic(nextSequenceNumber(), from, to, message);
+        out.write(request.toBytes());
+
+        byte[] respBytes = readPdu();
+        SubmitSmResp resp = SubmitSmResp.fromBytes(respBytes);
+        if (resp.getHeader().getCommandStatus() != CommandStatus.ESME_ROK) {
+            throw new IOException("Submit failed with status: 0x" + Integer.toHexString(resp.getHeader().getCommandStatus()));
+        }
+        System.out.println("Submitted message to " + to + " with message ID: " + resp.getMessageId());
     }
 
     private byte[] readPdu() throws IOException {

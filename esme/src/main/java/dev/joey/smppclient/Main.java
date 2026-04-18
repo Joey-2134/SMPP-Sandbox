@@ -7,7 +7,8 @@ public class Main {
         SmppClient client = new SmppClient("localhost", 2775);
         try {
             client.connect();
-            client.bind("testSystemId", "password");
+            client.bind("joeysSystemId", "password");
+            client.submitSm("joey", "smsc", "Hello, World!");
             client.unbind();
         } catch (IOException e) {
             e.printStackTrace();

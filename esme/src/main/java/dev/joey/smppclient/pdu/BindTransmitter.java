@@ -3,33 +3,27 @@ package dev.joey.smppclient.pdu;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class BindTransmitter {
-    private Header header;
-    private String systemId;
-    private String password;
-    private String systemType;
-    private int interfaceVersion;
-    private int addrTon;
-    private int addrNpi;
-    private String addressRange;
+    private final int sequenceNumber;
+    private final String systemId;
+    private final String password;
+    private final String systemType;
+
+    public BindTransmitter(int sequenceNumber, String systemId, String password, String systemType) {
+        this.sequenceNumber = sequenceNumber;
+        this.systemId = systemId;
+        this.password = password;
+        this.systemType = systemType;
+    }
 
     public byte[] toBytes() {
         byte[] systemIdBytes = Utils.toCOctetString(systemId);
         byte[] passwordBytes = Utils.toCOctetString(password);
         byte[] systemTypeBytes = Utils.toCOctetString(systemType);
-        byte[] addressRangeBytes = Utils.toCOctetString(addressRange);
+        byte[] addressRangeBytes = Utils.toCOctetString("");
 
         int bodyLength = systemIdBytes.length + passwordBytes.length + systemTypeBytes.length + addressRangeBytes.length + 3;
-        int commandLength = Header.LENGTH + bodyLength;
-
-        Header header = new Header(commandLength, CommandId.BIND_TRANSMITTER, 0, this.header.getSequenceNumber());
+        Header header = new Header(Header.LENGTH + bodyLength, CommandId.BIND_TRANSMITTER, 0, sequenceNumber);
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {

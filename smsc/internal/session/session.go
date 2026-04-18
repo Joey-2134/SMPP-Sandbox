@@ -2,6 +2,7 @@ package session
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"sync/atomic"
 
@@ -97,12 +98,13 @@ func (s *Session) handleSubmitSM(header pdu.Header, raw []byte) error {
 	if s.State != BOUND_TX && s.State != BOUND_TRX {
 		return s.writeGenericNack(header.SequenceNumber, pdu.ESME_RINVBNDSTS)
 	}
-	_, err := pdu.ReadSubmitSM(raw)
+	submitSM, err := pdu.ReadSubmitSM(raw)
 	if err != nil {
 		return err
 	}
 
 	messageID := generateMessageID()
+	log.Printf("submit_sm from %s: to=%s msg=%s id=%s", s.SystemID, submitSM.DestAddr, string(submitSM.Message), messageID)
 	_, err = s.Conn.Write(pdu.NewSubmitSMResp(header.SequenceNumber, pdu.ESME_ROK, messageID))
 	return err
 }
