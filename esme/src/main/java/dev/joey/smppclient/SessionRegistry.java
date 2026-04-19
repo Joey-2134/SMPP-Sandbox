@@ -17,21 +17,33 @@ public class SessionRegistry {
     public void registerEmitter(UUID id, SseEmitter emitter) {
         emitters.put(id, emitter);
         SmppClient client = sessions.get(id);
+        if (client != null) {
+            wireEventListener(id, client);
+        }
+    }
+
+    private void wireEventListener(UUID id, SmppClient client) {
         client.setEventListener(event -> {
+            SseEmitter emitter = emitters.get(id);
+            if (emitter == null) return;
             try {
-                emitters.get(id).send(event);
+                emitter.send(event);
             } catch (IOException e) {
                 emitters.remove(id);
             }
         });
     }
-    
+
     public UUID createSession(String host, int port, String systemId, String password, BindType bindType) {
         SmppClient client = new SmppClient(host, port);
         try {
             client.connect();
             client.bind(systemId, password, bindType);
             sessions.put(client.getClientId(), client);
+            SseEmitter emitter = emitters.get(client.getClientId());
+            if (emitter != null) {
+                wireEventListener(client.getClientId(), client);
+            }
             return client.getClientId();
         } catch (IOException e) {
             throw new RuntimeException("Failed to create session", e);

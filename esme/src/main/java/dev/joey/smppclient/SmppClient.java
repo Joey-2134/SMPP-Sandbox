@@ -16,12 +16,17 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class SmppClient {
+
+    private static final int HEARTBEAT_INTERVAL = 15;
+
     @Getter
     private final UUID clientId;
     private final String host;
@@ -33,6 +38,7 @@ public class SmppClient {
     private BindType bindType;
     @Setter
     private Consumer<SessionEvent> eventListener = e -> {}; // no-op default
+    private ScheduledExecutorService heartbeat;
     private final AtomicInteger sequenceNumber = new AtomicInteger(1);
     private final ConcurrentHashMap<Integer, CompletableFuture<byte[]>> pendingResponses = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, Consumer<SubmitSmResp>> submitCallbacks = new ConcurrentHashMap<>();
@@ -73,6 +79,8 @@ public class SmppClient {
             if (resp.getHeader().getCommandStatus() != CommandStatus.ESME_ROK) {
                 throw new IOException("Bind failed with status: 0x" + Integer.toHexString(resp.getHeader().getCommandStatus()));
             }
+            heartbeat = Executors.newSingleThreadScheduledExecutor();
+            heartbeat.scheduleAtFixedRate(this::sendEnquireLink, HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL, TimeUnit.SECONDS);
             System.out.println("Bound as: " + resp.getSystemId());
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             throw new IOException("Bind failed", e);
@@ -94,6 +102,7 @@ public class SmppClient {
                 throw new IOException("Unbind failed with status: 0x" + Integer.toHexString(resp.getHeader().getCommandStatus()));
             }
             System.out.println("Unbound");
+            heartbeat.shutdown();
             socket.close();
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             throw new IOException("Unbind failed", e);
@@ -151,6 +160,14 @@ public class SmppClient {
                             "Message ID: " + resp.getMessageId()
                         ));
                         callback.accept(resp);
+                        continue;
+                    }
+                    if (header.getCommandId() == CommandId.ENQUIRE_LINK_RESP) {
+                        eventListener.accept(new SessionEvent(
+                            SessionEvent.EventType.ENQUIRE_LINK_RESP,
+                            LocalDateTime.now().toString(),
+                            "seq=" + header.getSequenceNumber()
+                        ));
                     }
                 } else {
                     switch (header.getCommandId()) {
@@ -162,6 +179,7 @@ public class SmppClient {
             }
         } catch (IOException e) {
             pendingResponses.values().forEach(f -> f.completeExceptionally(e));
+            heartbeat.shutdown();
             submitCallbacks.clear();
         }
     }
@@ -183,5 +201,19 @@ public class SmppClient {
   
     private void handleDefault(Header header) throws IOException {
         out.write(new GenericNack(header.getSequenceNumber(), CommandStatus.ESME_RINVCMDID).toBytes());
+    }
+
+    private void sendEnquireLink() {
+        try {
+            int seqNum = nextSequenceNumber();
+            out.write(new EnquireLink(seqNum).toBytes());
+            eventListener.accept(new SessionEvent(
+                SessionEvent.EventType.ENQUIRE_LINK,
+                LocalDateTime.now().toString(),
+                "Sent enquire_link PDU"
+            ));
+        } catch (IOException e) {
+            System.out.println("Error sending enquire_link: " + e.getMessage());
+        }
     }
 }

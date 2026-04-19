@@ -10,6 +10,8 @@ public class SessionEvent {
         SUBMIT_SENT,
         SUBMIT_ACKED,
         DELIVER_SM,
+        ENQUIRE_LINK,
+        ENQUIRE_LINK_RESP,
         ERROR
     }
 
