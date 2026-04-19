@@ -27,7 +27,7 @@ public class SubmitSm {
     private final int smDefaultMsgId;
     private final byte[] message;
 
-    public static SubmitSm basic(int sequenceNumber, String sourceAddr, String destAddr, String message) {
+    public static SubmitSm basic(int sequenceNumber, String sourceAddr, String destAddr, String message, boolean recieveDeliveryReceipt) {
         return new SubmitSm(
                 sequenceNumber,
                 "",     // service_type
@@ -42,7 +42,7 @@ public class SubmitSm {
                 0x00,   // priority_flag
                 "",     // schedule_delivery_time (immediate)
                 "",     // validity_period (default)
-                0x01,   // registered_delivery, we want a delivery receipt
+                recieveDeliveryReceipt ? 0x01 : 0x00,   // registered_delivery, we want a delivery receipt
                 0x00,   // replace_if_present_flag
                 0x00,   // data_coding (GSM7)
                 0x00,   // sm_default_msg_id

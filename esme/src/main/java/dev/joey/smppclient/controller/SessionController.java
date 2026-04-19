@@ -74,7 +74,7 @@ public class SessionController {
             throw new ResponseStatusException(HttpStatus.METHOD_NOT_ALLOWED, "RX session cannot send messages");
         }
         try {
-            client.submitSm(request.getFrom(), request.getTo(), request.getMessage(), resp -> {});
+            client.submitSm(request.getFrom(), request.getTo(), request.getMessage(), request.isRequestDr(), resp -> {});
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Submit failed: " + e.getMessage());
         }

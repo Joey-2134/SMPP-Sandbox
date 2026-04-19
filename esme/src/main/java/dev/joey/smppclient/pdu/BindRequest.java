@@ -3,14 +3,14 @@ package dev.joey.smppclient.pdu;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-public class BindTransmitter {
+public class BindRequest {
     private final int commandId;
     private final int sequenceNumber;
     private final String systemId;
     private final String password;
     private final String systemType;
 
-    public BindTransmitter(int commandId, int sequenceNumber, String systemId, String password, String systemType) {
+    public BindRequest(int commandId, int sequenceNumber, String systemId, String password, String systemType) {
         this.commandId = commandId;
         this.sequenceNumber = sequenceNumber;
         this.systemId = systemId;

@@ -142,10 +142,12 @@
         .event-table .ts  { color: #555; white-space: nowrap; width: 180px; }
         .event-table .detail { color: #aaa; }
 
-        .type-SUBMIT_SENT  { color: #7eb8d4; }
-        .type-SUBMIT_ACKED { color: #7ec87e; }
-        .type-DELIVER_SM   { color: #d4a76a; }
-        .type-ERROR        { color: #d47a7a; }
+        .type-SUBMIT_SENT       { color: #7eb8d4; }
+        .type-SUBMIT_ACKED      { color: #7ec87e; }
+        .type-DELIVER_SM        { color: #d4a76a; }
+        .type-ENQUIRE_LINK      { color: #666; }
+        .type-ENQUIRE_LINK_RESP { color: #555; }
+        .type-ERROR             { color: #d47a7a; }
 
         .empty-log { color: #444; font-size: 0.75rem; padding: 10px; text-align: center; }
 
@@ -264,6 +266,10 @@
                         <label>Message</label>
                         <input name="msg" placeholder="Hello world" required>
                     </div>
+                    <div class="field">
+                        <label>Receive Delivery Receipt</label>
+                        <input name="requestDr" type="checkbox" checked style="width:16px;height:16px;margin-top:6px;">
+                    </div>
                     <button type="submit" class="secondary">Send</button>
                 </form>
             </div>` : ''}
@@ -322,9 +328,10 @@
         e.preventDefault();
         const form = e.target;
         const body = {
-            from:    form.from.value,
-            to:      form.to.value,
-            message: form.msg.value,
+            from:      form.from.value,
+            to:        form.to.value,
+            message:   form.msg.value,
+            requestDr: form.requestDr.checked,
         };
 
         try {
