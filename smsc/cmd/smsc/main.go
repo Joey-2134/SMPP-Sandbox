@@ -4,12 +4,20 @@ import (
 	"log"
 	"net"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/joeygalvin/smpp-sandbox/smsc/internal/server"
 	"github.com/joeygalvin/smpp-sandbox/smsc/internal/session"
+	"github.com/joeygalvin/smpp-sandbox/smsc/internal/store"
+	"github.com/joeygalvin/smpp-sandbox/smsc/tui"
 )
 
 func main() {
-	manager := session.NewManager()
+	store, err := store.Open(store.DefaultPath)
+	if err != nil {
+		log.Fatalf("Failed to open store: %v", err)
+	}
+	defer store.Close()
+	manager := session.NewManager(store)
 
 	s := server.NewServer(
 		":2775",
@@ -29,5 +37,10 @@ func main() {
 		},
 	)
 
-	s.Start()
+	go s.Start()
+
+	p := tea.NewProgram(tui.NewModel(store), tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		log.Fatal(err)
+	}
 }

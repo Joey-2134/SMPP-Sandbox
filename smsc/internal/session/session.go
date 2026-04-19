@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 
 	"github.com/joeygalvin/smpp-sandbox/smsc/internal/pdu"
+	"github.com/joeygalvin/smpp-sandbox/smsc/internal/store"
 )
 
 var messageIDCounter atomic.Uint64
@@ -16,16 +17,19 @@ type Session struct {
 	Conn           net.Conn
 	SystemID       string
 	SequenceNumber uint32
+	store          *store.Store
+	sessionID      int64
 }
 
 func generateMessageID() string {
 	return fmt.Sprintf("%d", messageIDCounter.Add(1))
 }
 
-func NewSession(conn net.Conn) *Session {
+func NewSession(conn net.Conn, store *store.Store) *Session {
 	return &Session{
 		State: OPEN,
 		Conn:  conn,
+		store: store,
 	}
 }
 
@@ -70,6 +74,13 @@ func (s *Session) handleBind(header pdu.Header, raw []byte, state State, command
 	}
 	s.SystemID = bindRequest.SystemID
 	s.State = state
+
+	id, err := s.store.InsertSession(s.SystemID, s.Conn.RemoteAddr().String(), bindTypeString(state))
+	if err != nil {
+		return err
+	}
+	s.sessionID = id
+
 	bindResponse := pdu.BindResponse{
 		Header: pdu.Header{
 			CommandLength:  uint32(pdu.HEADER_LENGTH + len(s.SystemID) + 1),
@@ -104,20 +115,28 @@ func (s *Session) handleSubmitSM(header pdu.Header, raw []byte) error {
 	}
 
 	messageID := generateMessageID()
-	log.Printf("submit_sm from %s: to=%s msg=%s id=%s, dr_requested=%t", s.SystemID, submitSM.DestAddr, string(submitSM.Message), messageID, submitSM.RegisteredDelivery == 0x01)
+	drRequested := submitSM.RegisteredDelivery == 0x01
+
+	if err := s.store.InsertMessage(s.sessionID, messageID, s.SystemID, submitSM.SourceAddr, submitSM.DestAddr, string(submitSM.Message), drRequested); err != nil {
+		return err
+	}
+	log.Printf("submit_sm from %s: to=%s msg=%s id=%s dr_requested=%t", s.SystemID, submitSM.DestAddr, string(submitSM.Message), messageID, drRequested)
 
 	_, err = s.Conn.Write(pdu.NewSubmitSMResp(header.SequenceNumber, pdu.ESME_ROK, messageID))
 	if err != nil {
 		return err
 	}
 
-	if submitSM.RegisteredDelivery == 0x01 {
+	if drRequested {
 		s.SequenceNumber++
 		_, err = s.Conn.Write(pdu.NewDeliverSM(s.SequenceNumber, submitSM, messageID))
 		if err != nil {
 			return err
 		}
-		log.Printf("delivered_sm to %s: to=%s msg=%s id=%s", s.SystemID, submitSM.DestAddr, string(submitSM.Message), messageID)
+		if err := s.store.MarkDelivered(messageID); err != nil {
+			return err
+		}
+		log.Printf("deliver_sm to %s: to=%s msg=%s id=%s", s.SystemID, submitSM.DestAddr, string(submitSM.Message), messageID)
 	}
 
 	return nil
@@ -137,10 +156,26 @@ func (s *Session) handleUnbind(header pdu.Header) error {
 	}
 	s.State = UNBOUND
 	_, err := s.Conn.Write(pdu.NewUnbindResp(header.SequenceNumber, pdu.ESME_ROK))
+	if s.sessionID != 0 {
+		s.store.CloseSession(s.sessionID)
+	}
 	s.Conn.Close()
 	return err
 }
 
 func (s *Session) handleDefault(header pdu.Header) error {
 	return s.writeGenericNack(header.SequenceNumber, pdu.ESME_RINVCMDID)
+}
+
+func bindTypeString(state State) string {
+	switch state {
+	case BOUND_TX:
+		return "TX"
+	case BOUND_RX:
+		return "RX"
+	case BOUND_TRX:
+		return "TRX"
+	default:
+		return ""
+	}
 }
