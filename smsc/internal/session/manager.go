@@ -3,23 +3,27 @@ package session
 import (
 	"net"
 	"sync"
+
+	"github.com/joeygalvin/smpp-sandbox/smsc/internal/store"
 )
 
 type Manager struct {
 	mu       sync.RWMutex
 	sessions map[net.Conn]*Session
+	store    *store.Store
 }
 
-func NewManager() *Manager {
+func NewManager(store *store.Store) *Manager {
 	return &Manager{
 		sessions: make(map[net.Conn]*Session),
+		store:    store,
 	}
 }
 
 func (m *Manager) AddSession(conn net.Conn) *Session {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	session := NewSession(conn)
+	session := NewSession(conn, m.store)
 	m.sessions[conn] = session
 	return session
 }

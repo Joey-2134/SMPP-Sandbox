@@ -6,10 +6,16 @@ import (
 
 	"github.com/joeygalvin/smpp-sandbox/smsc/internal/server"
 	"github.com/joeygalvin/smpp-sandbox/smsc/internal/session"
+	"github.com/joeygalvin/smpp-sandbox/smsc/internal/store"
 )
 
 func main() {
-	manager := session.NewManager()
+	store, err := store.Open(store.DefaultPath)
+	if err != nil {
+		log.Fatalf("Failed to open store: %v", err)
+	}
+	defer store.Close()
+	manager := session.NewManager(store)
 
 	s := server.NewServer(
 		":2775",
