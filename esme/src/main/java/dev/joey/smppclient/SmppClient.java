@@ -71,7 +71,7 @@ public class SmppClient {
             case RX  -> CommandId.BIND_RECEIVER;
             case TRX -> CommandId.BIND_TRANSCEIVER;
         };
-        out.write(new BindTransmitter(commandId, seqNum, systemId, password, "").toBytes());
+        out.write(new BindRequest(commandId, seqNum, systemId, password, "").toBytes());
 
         try {
             byte[] respBytes = future.get(5, TimeUnit.SECONDS);
@@ -110,10 +110,10 @@ public class SmppClient {
     }
 
     // fire and forget
-    public void submitSm(String from, String to, String message, Consumer<SubmitSmResp> callback) throws IOException {
+    public void submitSm(String from, String to, String message, boolean receiveDeliveryReceipt, Consumer<SubmitSmResp> callback) throws IOException {
         int seqNum = nextSequenceNumber();
         submitCallbacks.put(seqNum, callback);
-        out.write(SubmitSm.basic(seqNum, from, to, message).toBytes());
+        out.write(SubmitSm.basic(seqNum, from, to, message, receiveDeliveryReceipt).toBytes());
         eventListener.accept(new SessionEvent(
             SessionEvent.EventType.SUBMIT_SENT,
              LocalDateTime.now().toString(),
@@ -184,7 +184,7 @@ public class SmppClient {
         }
     }
   
-    private void handleDeliverSm(Header header, byte[] raw) throws IOException {
+    private void handleDeliverSm(Header header, byte[] raw) throws IOException {  
         SessionEvent event = new SessionEvent(
             SessionEvent.EventType.DELIVER_SM,
             LocalDateTime.now().toString(),

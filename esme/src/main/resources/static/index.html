@@ -266,6 +266,10 @@
                         <label>Message</label>
                         <input name="msg" placeholder="Hello world" required>
                     </div>
+                    <div class="field">
+                        <label>Receive Delivery Receipt</label>
+                        <input name="requestDr" type="checkbox" checked style="width:16px;height:16px;margin-top:6px;">
+                    </div>
                     <button type="submit" class="secondary">Send</button>
                 </form>
             </div>` : ''}
@@ -324,9 +328,10 @@
         e.preventDefault();
         const form = e.target;
         const body = {
-            from:    form.from.value,
-            to:      form.to.value,
-            message: form.msg.value,
+            from:      form.from.value,
+            to:        form.to.value,
+            message:   form.msg.value,
+            requestDr: form.requestDr.checked,
         };
 
         try {
