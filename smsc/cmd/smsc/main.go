@@ -4,9 +4,11 @@ import (
 	"log"
 	"net"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/joeygalvin/smpp-sandbox/smsc/internal/server"
 	"github.com/joeygalvin/smpp-sandbox/smsc/internal/session"
 	"github.com/joeygalvin/smpp-sandbox/smsc/internal/store"
+	"github.com/joeygalvin/smpp-sandbox/smsc/tui"
 )
 
 func main() {
@@ -35,5 +37,10 @@ func main() {
 		},
 	)
 
-	s.Start()
+	go s.Start()
+
+	p := tea.NewProgram(tui.NewModel(store), tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
