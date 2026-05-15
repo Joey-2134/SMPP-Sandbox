@@ -31,7 +31,12 @@ func (m *Manager) AddSession(conn net.Conn) *Session {
 func (m *Manager) RemoveSession(conn net.Conn) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	delete(m.sessions, conn)
+	if s, ok := m.sessions[conn]; ok {
+		if s.sessionID != 0 {
+			s.store.CloseSession(s.sessionID)
+		}
+		delete(m.sessions, conn)
+	}
 }
 
 func (m *Manager) GetSession(conn net.Conn) *Session {

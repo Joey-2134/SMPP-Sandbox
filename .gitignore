@@ -2,3 +2,5 @@ CLAUDE.md
 .idea/
 .vscode/
 smsc/smsc.db
+*.db-wal
+*.db-shm
